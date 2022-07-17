@@ -12,10 +12,29 @@ typedef struct {
     Value* values;
 } ValueArray;
 
+/***
+ * Initialize constant pool to hold values.
+ * @param array
+ */
 void initValueArray(ValueArray* array);
+
+/***
+ * Write a new constant inside the constant pool.
+ * @param array
+ * @param value
+ */
 void writeValueArray(ValueArray* array, Value value);
+
+/***
+ * Free the memory destroying the constant pool.
+ * @param array
+ */
 void freeValueArray(ValueArray* array);
 
+/***
+ * Pretty print a constant value.
+ * @param value
+ */
 void printValue(Value value);
 
 #endif //CLOX_VALUE_H

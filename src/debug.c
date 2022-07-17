@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "value.h"
 
 size_t constantInstruction(const char *name, const Chunk *chunk, size_t offset);
 
@@ -30,6 +29,16 @@ size_t constantInstruction(const char *name, const Chunk *chunk, size_t offset) 
 size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
 
     fprintf(stdout, "%04zu ", offset);
+
+    // Get current instruction line
+    size_t line = getLine(chunk, offset);
+
+    if (offset > 0 && line == getLine(chunk, offset - 1)) {
+        fprintf(stdout, "\t| ");
+    }
+    else {
+        fprintf(stdout, "%4d ", chunk->lines[offset].line);
+    }
 
     uint8_t instruction = chunk->code[offset];
 

@@ -10,10 +10,21 @@ typedef enum {
 } OpCode;
 
 typedef struct {
-    size_t count;
-    size_t capacity;
-    uint8_t* code;
-    ValueArray constants;
+    int     line;
+    size_t  offset;
+} LineStart;
+
+typedef struct {
+
+    size_t      count;
+    size_t      capacity;
+    uint8_t*    code;
+
+    size_t      lineCount;
+    size_t      lineCapacity;
+    LineStart*  lines;
+
+    ValueArray  constants;
 } Chunk;
 
 /***
@@ -26,8 +37,9 @@ void initChunk(Chunk* chunk);
  * Write a byte inside a chunk.
  * @param chunk The chunk where the byte will be written.
  * @param byte The byte to write.
+ * @param line In which line the associated instruction is
  */
-void writeChunk(Chunk* chunk, uint8_t byte);
+void writeChunk(Chunk* chunk, uint8_t byte, int line);
 
 /***
  * Deallocate the chunk and initialize to the beginning state.
@@ -42,5 +54,7 @@ void freeChunk(Chunk* chunk);
  * @return
  */
 size_t addConstant(Chunk* chunk, Value value);
+
+int getLine(const Chunk* chunk, size_t instruction);
 
 #endif //CLOX_CHUNK_H
