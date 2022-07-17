@@ -52,6 +52,25 @@ size_t addConstant(Chunk* chunk, Value value) {
     return chunk->constants.count - 1;
 }
 
+void writeConstant(Chunk* chunk, Value value, int line) {
+
+    size_t index = addConstant(chunk, value);
+    if (index < 256) {
+        writeChunk(chunk, OP_CONSTANT, line);
+        writeChunk(chunk, index, line);
+    }
+    else {
+        // My machine is little-endian
+
+        //257: 00000000 00000001 00000001
+
+        writeChunk(chunk, OP_CONSTANT_LONG, line);
+        writeChunk(chunk, (uint8_t)(index & 0xff), line);
+        writeChunk(chunk, (uint8_t)(index >> 8) & 0xff, line);
+        writeChunk(chunk, (uint8_t)(index >> 16) & 0xff, line);
+    }
+}
+
 int getLine(const Chunk* chunk, size_t instruction) {
 
     size_t start = 0;

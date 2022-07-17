@@ -20,10 +20,21 @@ size_t simpleInstruction(const char* name, size_t offset) {
 
 size_t constantInstruction(const char *name, const Chunk *chunk, size_t offset) {
     uint8_t constant = chunk->code[offset + 1];
-    fprintf(stdout, "%-16s %4d '", name, constant);
+    fprintf(stdout, "%-20s %4d '", name, constant);
     printValue(chunk->constants.values[constant]);
     fprintf(stdout, "'\n");
     return offset + 2;
+}
+
+size_t constantLongInstruction(const char *name, const Chunk *chunk, size_t offset) {
+
+    // Again, my machine is little endian
+    uint32_t constant = (chunk->code[offset + 1]) | (chunk->code[offset + 2] << 8) | (chunk->code[offset + 3] << 16);
+
+    fprintf(stdout, "%-20s %4d '", name, constant);
+    printValue(chunk->constants.values[constant]);
+    fprintf(stdout, "'\n");
+    return offset + 4;
 }
 
 size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
@@ -49,6 +60,9 @@ size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
         case OP_CONSTANT: {
             return constantInstruction("OP_CONSTANT", chunk, offset);
         }
+        case OP_CONSTANT_LONG: {
+            return constantLongInstruction("OP_LONG_CONSTANT", chunk, offset);
+        }
         default: {
             fprintf(stderr, "Unknown opcode %d\n", instruction);
             return offset + 1;
@@ -56,3 +70,14 @@ size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
     }
 }
 
+void printConstantPool(const Chunk* chunk, const char* msg) {
+
+    fprintf(stdout, "== %s-constant-pool ==\n", msg);
+
+    for (size_t i = 0; i < chunk->constants.count; i++) {
+        fprintf(stdout, "%04zu: ", i);
+        printValue(chunk->constants.values[i]);
+        fprintf(stdout, "\n");
+    }
+
+}

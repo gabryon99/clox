@@ -5,8 +5,9 @@
 #include "value.h"
 
 typedef enum {
-    OP_CONSTANT,    // 2
-    OP_RETURN       // 1
+    OP_CONSTANT_LONG,   //
+    OP_CONSTANT,        // 2
+    OP_RETURN           // 1
 } OpCode;
 
 typedef struct {
@@ -56,5 +57,7 @@ void freeChunk(Chunk* chunk);
 size_t addConstant(Chunk* chunk, Value value);
 
 int getLine(const Chunk* chunk, size_t instruction);
+
+void writeConstant(Chunk* chunk, Value value, int line);
 
 #endif //CLOX_CHUNK_H
