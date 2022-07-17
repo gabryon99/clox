@@ -2,15 +2,18 @@
 #define CLOX_CHUNK_H
 
 #include "common.h"
+#include "value.h"
 
 typedef enum {
-    OP_RETURN
+    OP_CONSTANT,    // 2
+    OP_RETURN       // 1
 } OpCode;
 
 typedef struct {
     size_t count;
     size_t capacity;
     uint8_t* code;
+    ValueArray constants;
 } Chunk;
 
 /***
@@ -31,5 +34,13 @@ void writeChunk(Chunk* chunk, uint8_t byte);
  * @param chunk The chunk to deallocate.
  */
 void freeChunk(Chunk* chunk);
+
+/***
+ * Add a new constant inside the constant pool.
+ * @param chunk
+ * @param value The constant to add inside the pool.
+ * @return
+ */
+size_t addConstant(Chunk* chunk, Value value);
 
 #endif //CLOX_CHUNK_H
