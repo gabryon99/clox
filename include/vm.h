@@ -3,7 +3,7 @@
 
 #include "chunk.h"
 
-#define STACK_SIZE 256
+#define INITIAL_STACK_SIZE 512
 
 typedef enum {
     INTERPRET_OK,
@@ -13,15 +13,15 @@ typedef enum {
 
 typedef struct {
     Chunk*      chunk;
-    uint8_t*    ip; // Instruction Pointer
-    Value       stack[STACK_SIZE];
+    uint8_t*    ip;         // Instruction Pointer
+    Value       stack[INITIAL_STACK_SIZE];
     Value*      stackTop;
 } VM;
 
 void initVM();
 void freeVM();
 
-InterpretResult interpret(Chunk* chunk);
+InterpretResult interpret(const char* source);
 void push(Value value);
 Value pop();
 

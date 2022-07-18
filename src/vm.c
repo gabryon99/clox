@@ -2,6 +2,7 @@
 
 #include "vm.h"
 #include "debug.h"
+#include "compiler.h"
 
 // Declare the Virtual Machine as static
 VM vm;
@@ -90,15 +91,12 @@ void initVM() {
 }
 
 void freeVM() {
-
+    // ...
 }
 
-InterpretResult interpret(Chunk* chunk) {
-
-    vm.chunk = chunk;
-    vm.ip = vm.chunk->code;
-
-    return run();
+InterpretResult interpret(const char* source) {
+    compile(source);
+    return INTERPRET_OK;
 }
 
 void push(Value value) {
