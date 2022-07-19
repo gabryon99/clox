@@ -61,9 +61,6 @@ void writeConstant(Chunk* chunk, Value value, int line) {
     }
     else {
         // My machine is little-endian
-
-        //257: 00000000 00000001 00000001
-
         writeChunk(chunk, OP_CONSTANT_LONG, line);
         writeChunk(chunk, (uint8_t)(index & 0xff), line);
         writeChunk(chunk, (uint8_t)(index >> 8) & 0xff, line);

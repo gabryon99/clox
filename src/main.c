@@ -38,21 +38,31 @@ static char* readFile(const char* path) {
 }
 
 static void repl() {
-#define LINE_BUFFER 1024
+#define LINE_BUFFER     1024
+#define QUIT_COMMAND    "quit"
 
     char line[LINE_BUFFER];
 
     fprintf(stdout, "clox v0.1\n");
+    fprintf(stdout, "Type '%s' to exit from REPL.\n", QUIT_COMMAND);
+
     for (; ;) {
+
         fprintf(stdout, "> ");
+
         if (!fgets(line, sizeof(line), stdin)) {
             fprintf(stdout, "\n");
             break;
         }
+        if (strncmp(line, QUIT_COMMAND, sizeof(QUIT_COMMAND) - 1) == 0) {
+            break;
+        }
+
         interpret(line);
     }
 
 #undef LINE_BUFFER
+#undef QUIT_COMMAND
 }
 
 static void runFile(const char* filepath) {

@@ -10,7 +10,6 @@ void disassembleChunk(const Chunk* chunk, const char* msg) {
     for (size_t offset = 0; offset < chunk->count; ) {
         offset = disassembleInstruction(chunk, offset);
     }
-
 }
 
 size_t simpleInstruction(const char* name, size_t offset) {
@@ -77,6 +76,27 @@ size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
         }
         case OP_DIVIDE: {
             return simpleInstruction("OP_DIVIDE", offset);
+        }
+        case OP_NIL: {
+            return simpleInstruction("OP_NIL", offset);
+        }
+        case OP_TRUE: {
+            return simpleInstruction("OP_TRUE", offset);
+        }
+        case OP_FALSE: {
+            return simpleInstruction("OP_FALSE", offset);
+        }
+        case OP_NOT: {
+            return simpleInstruction("OP_NOT", offset);
+        }
+        case OP_EQUAL: {
+            return simpleInstruction("OP_EQUAL", offset);
+        }
+        case OP_LESS: {
+            return simpleInstruction("OP_LESS", offset);
+        }
+        case OP_GREATER: {
+            return simpleInstruction("OP_GREATER", offset);
         }
         default: {
             fprintf(stderr, "Unknown opcode %d\n", instruction);
