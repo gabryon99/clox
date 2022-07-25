@@ -20,6 +20,11 @@ typedef enum {
     OP_EQUAL,           // (a != b) = !(a == b)
     OP_GREATER,         // (a >= b) = !(a <  b)
     OP_LESS,            // (a <= b) = !(a >  b)
+    OP_PRINT,
+    OP_POP,
+    OP_DEFINE_GLOBAL,
+    OP_GET_GLOBAL,
+    OP_SET_GLOBAL
 } OpCode;
 
 typedef struct {
@@ -70,6 +75,6 @@ size_t addConstant(Chunk* chunk, Value value);
 
 int getLine(const Chunk* chunk, size_t instruction);
 
-void writeConstant(Chunk* chunk, Value value, int line);
+size_t writeConstant(Chunk* chunk, Value value, int line);
 
 #endif //CLOX_CHUNK_H

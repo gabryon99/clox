@@ -52,7 +52,7 @@ size_t addConstant(Chunk* chunk, Value value) {
     return chunk->constants.count - 1;
 }
 
-void writeConstant(Chunk* chunk, Value value, int line) {
+size_t writeConstant(Chunk* chunk, Value value, int line) {
 
     size_t index = addConstant(chunk, value);
     if (index < 256) {
@@ -66,6 +66,8 @@ void writeConstant(Chunk* chunk, Value value, int line) {
         writeChunk(chunk, (uint8_t)(index >> 8) & 0xff, line);
         writeChunk(chunk, (uint8_t)(index >> 16) & 0xff, line);
     }
+
+    return index;
 }
 
 int getLine(const Chunk* chunk, size_t instruction) {
