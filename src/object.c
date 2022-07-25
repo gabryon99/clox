@@ -21,16 +21,32 @@ static Obj* allocateObject(size_t size, ObjType type) {
     return object;
 }
 
-ObjString* makeString(int length) {
+static uint32_t hashString(const char* key, int length) {
+    // Hash Function: FNV-1a
+    uint32_t hash = 2166136261u;
+    for (int i = 0; i < length; i++) {
+        hash ^= (uint8_t) key[i];
+        hash *= 16777619;
+    }
+    return hash;
+}
+
+ObjString* makeString(int length, uint32_t hash) {
     ObjString* objString = (ObjString*) allocateObject((sizeof(char) * (length + 1)) + sizeof(ObjString), OBJ_STRING);
     objString->length = length;
+    objString->hash = hash;
     return objString;
 }
 
 ObjString* copyString(const char* chars, int length) {
-    ObjString* string = makeString(length);
+
+    uint32_t hash = hashString(chars, length);
+    ObjString* string = makeString(length, hash);
+
     memcpy(string->chars, chars, length);
     string->chars[length] = '\0';
+
+
     return string;
 }
 

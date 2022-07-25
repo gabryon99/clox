@@ -21,11 +21,17 @@ struct Obj {
 
 struct ObjString {
     Obj obj;
+    // We cache the hash value of the string
+    // to speedup performance, avoiding its computation
+    // each time we need it (worst case O(length))
+    uint32_t hash;
+
+    // Flexible array members
     int length;
     char chars[];
 };
 
-ObjString* makeString(int length);
+ObjString* makeString(int length, uint32_t hash);
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 
