@@ -16,12 +16,16 @@ typedef struct {
     uint8_t*    ip;         // Instruction Pointer
     Value       stack[INITIAL_STACK_SIZE];
     Value*      stackTop;
+    Obj*        objects;
 } VM;
+
+extern VM vm;
 
 void initVM();
 void freeVM();
 
 InterpretResult interpret(const char* source);
+
 void push(Value value);
 Value pop();
 
