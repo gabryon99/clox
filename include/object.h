@@ -33,6 +33,8 @@ struct ObjString {
 
 ObjString* makeString(int length, uint32_t hash);
 ObjString* copyString(const char* chars, int length);
+ObjString* concatenateStrings(const char* s1, const char* s2, int l1, int l2);
+
 void printObject(Value value);
 
 static inline bool isObjType(Value value, ObjType type) {

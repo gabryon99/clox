@@ -20,9 +20,11 @@ static void resetStack() {
 void initVM() {
     resetStack();
     vm.objects = NULL;
+    initTable(&vm.strings);
 }
 
 void freeVM() {
+    freeTable(&vm.strings);
     freeObjects();
 }
 
@@ -39,11 +41,7 @@ static void concatenate() {
     ObjString* b = AS_STRING(pop());
     ObjString* a = AS_STRING(pop());
 
-    int length = a->length + b->length;
-    ObjString* result = makeString(length);
-    memcpy(result->chars, a->chars, a->length);
-    memcpy(result->chars + a->length, b->chars, b->length);
-    result->chars[length] = '\0';
+    ObjString* result = concatenateStrings(a->chars, b->chars, a->length, b->length);
 
     push(OBJ_VAL(result));
 }

@@ -24,4 +24,6 @@ bool tableGet(Table* table, ObjString* key, Value* value);
 
 void tableAddAll(Table* from, Table* to);
 
+ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t hash);
+
 #endif //CLOX_TABLE_H
