@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -9,6 +10,8 @@
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
 #endif
+
+#define UINT8_COUNT UINT8_MAX + 1
 
 typedef enum {
     PREC_NONE,
@@ -39,6 +42,23 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
+typedef struct {
+    // Variable's name.
+    Token name;
+    // Variable's scope.
+    int depth;
+} Local;
+
+typedef struct {
+    // Locals are ordered in the order that their declarations
+    // appears in the code.
+    Local locals[UINT8_COUNT];
+    // How many local variables are inside the current scope.
+    int localCount;
+    // Numbers of block surrounding the current scope.
+    int scopeDepth;
+} Compiler;
+
 static void grouping(bool);
 static void unary(bool);
 static void binary(bool);
@@ -52,6 +72,9 @@ static void statement();
 static void declaration();
 
 Parser parser;
+
+Compiler* current = NULL;
+
 Chunk* compilingChunk;
 // Optimization: challenge 21.1
 // Avoid the creation of new constants inside the constant pool
@@ -99,6 +122,12 @@ ParseRule rules[] = {
         [TOKEN_ERROR]           = {NULL,    NULL,   PREC_NONE},
         [TOKEN_EOF]             = {NULL,    NULL,   PREC_NONE},
 };
+
+static void initCompiler(Compiler* compiler) {
+    compiler->localCount = 0;
+    compiler->scopeDepth = 0;
+    current = compiler;
+}
 
 static Chunk* currentChunk() {
     return compilingChunk;
@@ -380,13 +409,93 @@ static uint8_t identifierConstant(Token* name) {
     return index;
 }
 
-static uint8_t parseVariable(const char* errorMessage) {
-    consume(TOKEN_IDENTIFIER, errorMessage);
-    return identifierConstant(&parser.previous);
+static bool identifiersEqual(Token* name1, Token* name2) {
+
+    // Pointing to the same memory address?
+    if (name1 == name2) return true;
+
+    if (name1->length != name2->length) {
+        return false;
+    }
+
+    return memcmp(name1->start, name2->start, name1->length) == 0;
+}
+
+static void beginScope() {
+    current->scopeDepth++;
+}
+
+static void endScope() {
+    current->scopeDepth--;
+
+    // Kills local variable
+    // Optimization idea: use OP_POPN to pop N variables from the stack
+
+    uint8_t variablesToPop = 0;
+
+    while (current->localCount > 0 && current->locals[current->localCount - 1].depth > current->scopeDepth) {
+        variablesToPop++;
+        current->localCount--;
+    }
+
+    emitBytes(OP_POPN, variablesToPop);
+}
+
+static void addLocal(Token name) {
+
+    // The VM supports up to 256 local variables
+    if (current->localCount == UINT8_COUNT) {
+        error("Too many local variables in function.");
+        return;
+    }
+
+    Local* local = &current->locals[current->localCount++];
+    local->name = name;
+    local->depth = -1;
+}
+
+static void markInitialized() {
+    current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
 static void defineVariable(uint8_t global) {
+
+    if (current->scopeDepth > 0) {
+        markInitialized();
+        return;
+    }
+
     emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
+static void declareVariable() {
+    if (current->scopeDepth == 0) return;
+
+    Token* name = &parser.previous;
+
+    for (int i = current->localCount - 1; i >= 0; i--) {
+        Local* local = &current->locals[i];
+        if (local->depth != -1 && local->depth < current->scopeDepth) {
+            break;
+        }
+
+        if (identifiersEqual(name, &local->name)) {
+            error("Already a variable with this name in this scope.");
+        }
+    }
+
+    addLocal(*name);
+}
+
+static uint8_t parseVariable(const char* errorMessage) {
+    consume(TOKEN_IDENTIFIER, errorMessage);
+
+    declareVariable();
+    if (current->scopeDepth > 0) {
+        return 0;
+    }
+
+    return identifierConstant(&parser.previous);
 }
 
 static void varDeclaration() {
@@ -406,16 +515,41 @@ static void varDeclaration() {
     defineVariable(global);
 }
 
+static int resolveLocal(Compiler* compiler, Token* name) {
+
+    for (int i = compiler->localCount - 1; i >= 0; i--) {
+        Local* local = &compiler->locals[i];
+        if (identifiersEqual(name, &local->name)) {
+            if (local->depth == -1) {
+                error("Can't read local variable in its own initializer.");
+            }
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 static void namedVariable(Token name, bool canAssign) {
 
-    uint8_t arg = identifierConstant(&name);
+    uint8_t getOp, setOp;
+    int arg = resolveLocal(current, &name);
+    if (arg != -1) {
+        getOp = OP_GET_LOCAL;
+        setOp = OP_SET_LOCAL;
+    }
+    else {
+        arg = identifierConstant(&name);
+        getOp = OP_GET_GLOBAL;
+        setOp = OP_SET_GLOBAL;
+    }
 
     if (canAssign && match(TOKEN_EQUAL)) {
         expression();
-        emitBytes(OP_SET_GLOBAL, arg);
+        emitBytes(setOp, (uint8_t) arg);
     }
     else {
-        emitBytes(OP_GET_GLOBAL, arg);
+        emitBytes(getOp, (uint8_t) arg);
     }
 
 }
@@ -430,6 +564,15 @@ static void printStatement() {
     emitByte(OP_PRINT);
 }
 
+static void block() {
+
+    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+        declaration();
+    }
+
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
 static void expressionStatement() {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
@@ -438,10 +581,16 @@ static void expressionStatement() {
 
 static void statement() {
 
-    // statement ::= printStatement | exprStatement
+    // statement ::= printStatement | block | exprStatement
+    // block     ::= '{' declaration* '}'
 
     if (match(TOKEN_PRINT)) {
         printStatement();
+    }
+    else if (match(TOKEN_LEFT_BRACE)) {
+        beginScope();
+        block();
+        endScope();
     }
     else {
         expressionStatement();
@@ -471,6 +620,10 @@ static void declaration() {
 bool compile(const char* source, Chunk* chunk) {
 
     initScanner(source);
+
+    Compiler compiler;
+    initCompiler(&compiler);
+
     compilingChunk = chunk;
 
     parser.hadError = false;

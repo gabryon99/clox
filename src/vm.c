@@ -175,6 +175,21 @@ static InterpretResult run() {
                 pop();
                 break;
             }
+            case OP_POPN: {
+                uint8_t toPop = READ_BYTE();
+                for (int _ = 0; _ < toPop; _++) pop();
+                break;
+            }
+            case OP_SET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                vm.stack[slot] = peek(0);
+                break;
+            }
+            case OP_GET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                push(vm.stack[slot]);
+                break;
+            }
             case OP_DEFINE_GLOBAL: {
                 ObjString* name = READ_STRING();
                 tableSet(&vm.globals, name, peek(0));
@@ -199,6 +214,7 @@ static InterpretResult run() {
                     runtimeError("Undefined variable '%s'.", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
+
                 break;
             }
             default: {

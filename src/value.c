@@ -73,3 +73,16 @@ bool valuesEqual(Value a, Value b) {
         }
     }
 }
+
+
+bool checkValue(ValueArray* array, Value value, size_t* loc) {
+
+    for (size_t i = 0; i < array->count; i++) {
+        if (valuesEqual(array->values[i], value)) {
+            *loc = i;
+            return true;
+        }
+    }
+
+    return false;
+}

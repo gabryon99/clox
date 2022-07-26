@@ -22,9 +22,12 @@ typedef enum {
     OP_LESS,            // (a <= b) = !(a >  b)
     OP_PRINT,
     OP_POP,
+    OP_POPN,
     OP_DEFINE_GLOBAL,
     OP_GET_GLOBAL,
-    OP_SET_GLOBAL
+    OP_SET_GLOBAL,
+    OP_GET_LOCAL,
+    OP_SET_LOCAL
 } OpCode;
 
 typedef struct {
