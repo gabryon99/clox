@@ -588,17 +588,27 @@ static void patchJump(int offset) {
 
 static void ifStatement() {
 
-    // ifStatement ::= 'if' ( expression )
+    // ifStatement ::= 'if' ( expression ) statement ('else' statement)?
 
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'if'.");
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
     statement();
+
+    int elseJump = emitJump(OP_JUMP);
 
     // Backpatching
     patchJump(thenJump);
+    emitByte(OP_POP);
+
+    if (match(TOKEN_ELSE)) {
+        statement();
+    }
+
+    patchJump(elseJump);
 }
 
 static void block() {

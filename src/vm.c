@@ -224,6 +224,11 @@ static InterpretResult run() {
                 if (isFalsey(peek(0))) vm.ip += offset;
                 break;
             }
+            case OP_JUMP: {
+                uint16_t offset = READ_SHORT();
+                vm.ip += offset;
+                break;
+            }
             default: {
                 return INTERPRET_OK; // Temp hack
             }
