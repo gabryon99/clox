@@ -1,5 +1,5 @@
 var a = 42;
-if (a == 42) {
+if (a == 42 and true == true) {
     print "The answer!";
 }
 else {

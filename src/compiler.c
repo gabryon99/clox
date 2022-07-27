@@ -66,6 +66,8 @@ static void number(bool);
 static void literal(bool);
 static void string(bool);
 static void variable(bool);
+static void _and(bool);
+static void _or(bool);
 
 static void expression();
 static void statement();
@@ -103,7 +105,7 @@ ParseRule rules[] = {
         [TOKEN_IDENTIFIER]      = {variable,    NULL,   PREC_NONE},
         [TOKEN_STRING]          = {string,    NULL,   PREC_NONE},
         [TOKEN_NUMBER]          = {number,  NULL,   PREC_NONE},
-        [TOKEN_AND]             = {NULL,    NULL,   PREC_NONE},
+        [TOKEN_AND]             = {NULL,    _and,   PREC_AND},
         [TOKEN_CLASS]           = {NULL,    NULL,   PREC_NONE},
         [TOKEN_ELSE]            = {NULL,    NULL,   PREC_NONE},
         [TOKEN_FALSE]           = {literal, NULL,   PREC_NONE},
@@ -111,7 +113,7 @@ ParseRule rules[] = {
         [TOKEN_FUN]             = {NULL,    NULL,   PREC_NONE},
         [TOKEN_IF]              = {NULL,    NULL,   PREC_NONE},
         [TOKEN_NIL]             = {literal, NULL,   PREC_NONE},
-        [TOKEN_OR]              = {NULL,    NULL,   PREC_NONE},
+        [TOKEN_OR]              = {NULL,    _or,   PREC_OR},
         [TOKEN_PRINT]           = {NULL,    NULL,   PREC_NONE},
         [TOKEN_RETURN]          = {NULL,    NULL,   PREC_NONE},
         [TOKEN_SUPER]           = {NULL,    NULL,   PREC_NONE},
@@ -247,13 +249,26 @@ static void emitConstant(Value value) {
     writeConstant(currentChunk(), value, parser.previous.line);
 }
 
-static void endCompiler() {
-#ifdef DEBUG_PRINT_CODE
-    if (!parser.hadError) {
-        disassembleChunk(currentChunk(), "code");
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+    // 16bit offset allow us to jump around 65535 bytes of code
+    emitByte(0xFF);
+    emitByte(0xFF);
+    return (int) currentChunk()->count - 2;
+}
+
+static void patchJump(int offset) {
+
+    int jump = (int) currentChunk()->count - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
     }
-#endif
-    emitReturn();
+
+    // Override the previous two bytes used as placeholder
+    // Our machine is little-endian!
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = (jump) & 0xff;
 }
 
 static void number(bool canAssign) {
@@ -347,6 +362,25 @@ static void literal(bool canAssign) {
             emitByte(OP_TRUE);
             break;
     }
+}
+
+static void _and(bool canAssign) {
+    int endJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+    parsePrecedence(PREC_AND);
+
+    patchJump(endJump);
+}
+
+static void _or(bool canAssign) {
+    int elseJump = emitJump(OP_JUMP_IF_FALSE);
+    int endJump = emitJump(OP_JUMP);
+
+    patchJump(elseJump);
+    emitByte(OP_POP);
+
+    parsePrecedence(PREC_OR);
+    patchJump(endJump);
 }
 
 static void expression() {
@@ -564,28 +598,6 @@ static void printStatement() {
     emitByte(OP_PRINT);
 }
 
-static int emitJump(uint8_t instruction) {
-    emitByte(instruction);
-    // 16bit offset allow us to jump around 65535 bytes of code
-    emitByte(0xFF);
-    emitByte(0xFF);
-    return (int) currentChunk()->count - 2;
-}
-
-static void patchJump(int offset) {
-
-    int jump = (int) currentChunk()->count - offset - 2;
-
-    if (jump > UINT16_MAX) {
-        error("Too much code to jump over.");
-    }
-
-    // Override the previous two bytes used as placeholder
-    // Our machine is little-endian!
-    currentChunk()->code[offset] = (jump >> 8) & 0xff;
-    currentChunk()->code[offset + 1] = (jump) & 0xff;
-}
-
 static void ifStatement() {
 
     // ifStatement ::= 'if' ( expression ) statement ('else' statement)?
@@ -665,6 +677,15 @@ static void declaration() {
     }
 
     if (parser.panicMode) synchronize();
+}
+
+static void endCompiler() {
+#ifdef DEBUG_PRINT_CODE
+    if (!parser.hadError) {
+        disassembleChunk(currentChunk(), "code");
+    }
+#endif
+    emitReturn();
 }
 
 bool compile(const char* source, Chunk* chunk) {
