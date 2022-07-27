@@ -1,0 +1,5 @@
+var a = 42;
+if (a == 42) {
+    print "The answer!";
+}
+print "So, did you get the answer?";

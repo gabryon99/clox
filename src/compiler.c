@@ -564,6 +564,43 @@ static void printStatement() {
     emitByte(OP_PRINT);
 }
 
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+    // 16bit offset allow us to jump around 65535 bytes of code
+    emitByte(0xFF);
+    emitByte(0xFF);
+    return (int) currentChunk()->count - 2;
+}
+
+static void patchJump(int offset) {
+
+    int jump = (int) currentChunk()->count - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+
+    // Override the previous two bytes used as placeholder
+    // Our machine is little-endian!
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = (jump) & 0xff;
+}
+
+static void ifStatement() {
+
+    // ifStatement ::= 'if' ( expression )
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after 'if'.");
+
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    statement();
+
+    // Backpatching
+    patchJump(thenJump);
+}
+
 static void block() {
 
     while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
@@ -581,11 +618,14 @@ static void expressionStatement() {
 
 static void statement() {
 
-    // statement ::= printStatement | block | exprStatement
+    // statement ::= printStatement | ifStatement | block | exprStatement
     // block     ::= '{' declaration* '}'
 
     if (match(TOKEN_PRINT)) {
         printStatement();
+    }
+    else if (match(TOKEN_IF)) {
+        ifStatement();
     }
     else if (match(TOKEN_LEFT_BRACE)) {
         beginScope();

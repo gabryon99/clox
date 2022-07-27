@@ -23,6 +23,13 @@ size_t byteInstruction(const char *name, const Chunk *chunk, size_t offset) {
     return offset + 2;
 }
 
+size_t shortInstruction(const char *name, const Chunk *chunk, size_t offset) {
+    uint8_t value1 = chunk->code[offset + 1];
+    uint8_t value2 = chunk->code[offset + 2];
+    fprintf(stdout, "%-20s %4d\n", name, ((value1 << 8) | value2));
+    return offset + 3;
+}
+
 size_t constantInstruction(const char *name, const Chunk *chunk, size_t offset) {
     uint8_t constant = chunk->code[offset + 1];
     fprintf(stdout, "%-20s %4d '", name, constant);
@@ -118,6 +125,9 @@ size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
         }
         case OP_GET_LOCAL: {
             return byteInstruction("OP_GET_LOCAL", chunk, offset);
+        }
+        case OP_JUMP_IF_FALSE: {
+            return shortInstruction("OP_JUMP_IF_FALSE", chunk, offset);
         }
         case OP_DEFINE_GLOBAL: {
             return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
