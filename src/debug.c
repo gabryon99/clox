@@ -131,6 +131,9 @@ size_t disassembleInstruction(const Chunk* chunk, size_t offset) {
         case OP_JUMP: {
             return jumpInstruction("OP_JUMP", 1, chunk, offset);
         }
+        case OP_LOOP: {
+            return jumpInstruction("OP_LOOP", -1, chunk, offset);
+        }
         case OP_DEFINE_GLOBAL: {
             return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
         }
