@@ -592,6 +592,12 @@ static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
 }
 
+static void expressionStatement() {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emitByte(OP_POP);
+}
+
 static void printStatement() {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after value.");
@@ -651,6 +657,54 @@ static void whileStatement() {
     emitByte(OP_POP);
 }
 
+static void forStatement() {
+
+    beginScope();
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+
+    if (match(TOKEN_SEMICOLON)) {
+        // No initializer.
+    }
+    else if (match(TOKEN_VAR)) {
+        varDeclaration();
+    }
+    else {
+        expressionStatement();
+    }
+
+    int loopStart = (int) currentChunk()->count;
+    int exitJump = -1;
+
+    if (!match(TOKEN_SEMICOLON)) {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+        exitJump = emitJump(OP_JUMP_IF_FALSE);
+        emitByte(OP_POP);
+    }
+
+    if (!match(TOKEN_RIGHT_PAREN)) {
+        int bodyJump = emitJump(OP_JUMP);
+        int incrementStart = currentChunk()->count;
+        expression();
+        emitByte(OP_POP);
+        consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+        emitLoop(loopStart);
+        loopStart = incrementStart;
+        patchJump(bodyJump);
+    }
+
+    statement();
+    emitLoop(loopStart);
+    if (exitJump != -1) {
+        patchJump(exitJump);
+        emitByte(OP_POP);
+    }
+
+    endScope();
+}
+
 static void block() {
 
     while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
@@ -660,15 +714,11 @@ static void block() {
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
-static void expressionStatement() {
-    expression();
-    consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
-    emitByte(OP_POP);
-}
+
 
 static void statement() {
 
-    // statement ::= printStatement | ifStatement | whileStatement | block | exprStatement
+    // statement ::= printStatement | ifStatement | whileStatement | forStatement | block | exprStatement
     // block     ::= '{' declaration* '}'
 
     if (match(TOKEN_PRINT)) {
@@ -679,6 +729,9 @@ static void statement() {
     }
     else if (match(TOKEN_WHILE)) {
         whileStatement();
+    }
+    else if (match(TOKEN_FOR)) {
+        forStatement();
     }
     else if (match(TOKEN_LEFT_BRACE)) {
         beginScope();
